@@ -33,9 +33,9 @@ export async function GET(request: Request) {
     // 3. Send Bark notifications for each task
     for (const task of tasksToNotify) {
       const barkKey = process.env.BARK_KEY;
-      const title = encodeURIComponent(`任务到期: ${task.title}`);
-      const body = encodeURIComponent("此任务已到期，请尽快处理。");
-      const barkUrl = `https://api.day.app/${barkKey}/${title}/${body}?group=任务管理器`;
+      const title = encodeURIComponent(`任务通知: ${task.title}`);
+      const body = encodeURIComponent("此任务时间已到，请尽快处理。");
+      const barkUrl = `https://api.day.app/${barkKey}/${title}/${body}?group=任务管理器&sound=electronic&volume=10&level=critical&call=1`;
 
       // Fire and forget the fetch request
       await fetch(barkUrl);
