@@ -8,3 +8,9 @@ export interface Task {
   intervalDays: number | null;
   createdAt: string;
 }
+
+export interface User {
+  id: string;
+  email: string;
+  passwordHash: string;
+}

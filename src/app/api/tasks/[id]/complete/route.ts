@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { neon } from '@neondatabase/serverless';
 import type { Task } from '@/lib/types';
 
@@ -48,8 +48,7 @@ export async function PATCH(
       
       const updatedTasks = (await sql`
         UPDATE "Task"
-        SET "dueDate" = ${nextDueDate.toISOString()},
-            "lastNotifiedAt" = NULL -- Reset notification tracking
+        SET "dueDate" = ${nextDueDate.toISOString()}
         WHERE id = ${taskId}
         RETURNING *;
       `) as Task[];
