@@ -38,9 +38,7 @@ export async function GET(request: Request) {
       const barkUrl = `https://api.day.app/${barkKey}/${title}/${body}?group=任务管理器`;
 
       // Fire and forget the fetch request
-      let res = await fetch(barkUrl);
-      res = await res.json();
-      console.log(res);
+      await fetch(barkUrl);
     }
 
     return NextResponse.json({ success: true, tasksNotified: tasksToNotify.length });
