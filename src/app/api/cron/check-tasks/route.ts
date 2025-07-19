@@ -38,7 +38,9 @@ export async function GET(request: Request) {
       const barkUrl = `https://api.day.app/${barkKey}/${title}/${body}?group=任务管理器`;
 
       // Fire and forget the fetch request
-      fetch(barkUrl);
+      fetch(barkUrl).catch((error) => {
+        console.error(`Failed to send Bark notification for task ${task.id}:`, error);
+      });
     }
 
     return NextResponse.json({ success: true, tasksNotified: tasksToNotify.length });
