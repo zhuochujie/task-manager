@@ -5,7 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import type { Task } from '@/lib/types';
 import { toDate, formatInTimeZone } from 'date-fns-tz';
-import { Plus, Calendar, Check, Pencil, Trash2, LogOut, X, Settings, Save } from 'lucide-react';
+import { Plus, Calendar, Check, Pencil, Trash2, LogOut, X, Settings, Save, Info } from 'lucide-react';
 
 // --- 时区配置 ---
 const TIME_ZONE = 'Asia/Shanghai';
@@ -23,6 +23,7 @@ const SettingsPanel = () => {
   const [barkKey, setBarkKey] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -51,6 +52,24 @@ const SettingsPanel = () => {
     setTimeout(() => setMessage(''), 2000);
   };
 
+  const handleTest = async () => {
+    setIsTesting(true);
+    setMessage('');
+    const res = await fetch('/api/user/config/test-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ barkKey }),
+    });
+    setIsTesting(false);
+    const result = await res.json();
+    if (res.ok) {
+      setMessage('测试通知已发送！请检查您的设备。');
+    } else {
+      setMessage(`发送失败: ${result.error || '未知错误'}`);
+    }
+    setTimeout(() => setMessage(''), 3000);
+  };
+
   if (isLoading) {
     return <div className="p-6 text-center">加载设置...</div>;
   }
@@ -71,14 +90,23 @@ const SettingsPanel = () => {
           className="block w-full px-3 py-2 transition duration-150 ease-in-out border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
         />
       </div>
-      <button
-        onClick={handleSave}
-        disabled={isSaving}
-        className="flex items-center justify-center w-full gap-2 px-4 py-2 font-bold text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400"
-      >
-        <Save size={18} />
-        {isSaving ? '保存中...' : '保存设置'}
-      </button>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="flex items-center justify-center w-full gap-2 px-4 py-2 font-bold text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400"
+        >
+          <Save size={18} />
+          {isSaving ? '保存中...' : '保存设置'}
+        </button>
+        <button
+          onClick={handleTest}
+          disabled={isTesting || !barkKey}
+          className="flex items-center justify-center w-full gap-2 px-4 py-2 font-bold text-indigo-600 transition-colors bg-indigo-100 border border-indigo-200 rounded-lg hover:bg-indigo-200 disabled:bg-slate-100 disabled:text-slate-400"
+        >
+          {isTesting ? '发送中...' : '测试通知'}
+        </button>
+      </div>
       {message && <p className="text-sm text-center text-green-600">{message}</p>}
     </div>
   );
@@ -103,6 +131,7 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showBarkPrompt, setShowBarkPrompt] = useState(false);
 
   const fetchTasks = async () => {
     setIsLoading(true);
@@ -113,8 +142,25 @@ export default function HomePage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login');
-    if (status === 'authenticated') fetchTasks();
+    if (status === 'authenticated') {
+      fetchTasks();
+      // 检查 Bark Key 配置
+      fetch('/api/user/config')
+        .then(res => res.json())
+        .then(data => {
+          const hasBarkKey = data.barkKey && data.barkKey.length > 0;
+          const promptDismissed = localStorage.getItem('barkPromptDismissed');
+          if (!hasBarkKey && promptDismissed !== 'true') {
+            setShowBarkPrompt(true);
+          }
+        });
+    }
   }, [status, router]);
+
+  const handleDismissBarkPrompt = () => {
+    setShowBarkPrompt(false);
+    localStorage.setItem('barkPromptDismissed', 'true');
+  };
 
   // --- CRUD 操作 ---
   const handleCreate = async (e: FormEvent) => {
@@ -156,8 +202,10 @@ export default function HomePage() {
   };
 
   const handleComplete = async (taskId: string) => {
-    await fetch(`/api/tasks/${taskId}/complete`, { method: 'PATCH' });
-    fetchTasks();
+    if (confirm('您确定要将此任务标记为完成吗？')) {
+      await fetch(`/api/tasks/${taskId}/complete`, { method: 'PATCH' });
+      fetchTasks();
+    }
   };
 
   const handleDelete = async (taskId: string) => {
@@ -203,6 +251,39 @@ export default function HomePage() {
       </header>
 
       <main className="max-w-5xl p-4 mx-auto sm:p-6 lg:p-8">
+        {showBarkPrompt && (
+          <div className="relative p-4 mb-6 text-indigo-800 bg-indigo-100 border-t-4 border-indigo-500 rounded-b shadow-sm">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <Info className="w-5 h-5 text-indigo-500" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium">
+                  为了能及时收到任务到期通知，请前往 
+                  <button 
+                    onClick={() => { setShowSettings(true); handleDismissBarkPrompt(); }} 
+                    className="font-semibold underline transition-colors hover:text-indigo-600 focus:outline-none"
+                  >
+                    设置
+                  </button> 
+                  页面配置您的 Bark Key。
+                </p>
+              </div>
+              <div className="pl-3 ml-auto">
+                <div className="-mx-1.5 -my-1.5">
+                  <button 
+                    onClick={handleDismissBarkPrompt} 
+                    className="inline-flex p-1.5 text-indigo-500 rounded-md hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-indigo-100 focus:ring-indigo-600" 
+                    aria-label="Dismiss"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showSettings && (
           <div className="mb-10 bg-white border border-gray-200 rounded-xl shadow-sm">
             <SettingsPanel />

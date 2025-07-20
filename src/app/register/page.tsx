@@ -56,7 +56,7 @@ export default function RegisterPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="block w-full px-3 py-2 transition duration-150 ease-in-out border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
+              className="block w-full px-3 py-2 transition duration-150 ease-in-out bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
             />
           </div>
           <div>
@@ -74,7 +74,7 @@ export default function RegisterPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="block w-full px-3 py-2 transition duration-150 ease-in-out border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
+              className="block w-full px-3 py-2 transition duration-150 ease-in-out bg-slate-50 border border-slate-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
             />
           </div>
           {error && <p className="text-sm text-center text-red-600">{error}</p>}
