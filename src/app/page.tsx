@@ -5,7 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import type { Task } from '@/lib/types';
 import { toDate, formatInTimeZone } from 'date-fns-tz';
-import { Plus, Calendar, Check, Pencil, Trash2, LogOut, X } from 'lucide-react';
+import { Plus, Calendar, Check, Pencil, Trash2, LogOut, X, Settings, Save } from 'lucide-react';
 
 // --- 时区配置 ---
 const TIME_ZONE = 'Asia/Shanghai';
@@ -17,6 +17,73 @@ const formatDateTimeForInput = (dateString: string) => {
   const dateInUTC8 = toDate(dateString, { timeZone: 'UTC' });
   return formatInTimeZone(dateInUTC8, TIME_ZONE, `yyyy-MM-dd'T'HH:mm`);
 };
+
+// --- Settings Component ---
+const SettingsPanel = () => {
+  const [barkKey, setBarkKey] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    fetch('/api/user/config')
+      .then(res => res.json())
+      .then(data => {
+        setBarkKey(data.barkKey || '');
+        setIsLoading(false);
+      });
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setMessage('');
+    const res = await fetch('/api/user/config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ barkKey }),
+    });
+    setIsSaving(false);
+    if (res.ok) {
+      setMessage('保存成功！');
+    } else {
+      setMessage('保存失败，请重试。');
+    }
+    setTimeout(() => setMessage(''), 2000);
+  };
+
+  if (isLoading) {
+    return <div className="p-6 text-center">加载设置...</div>;
+  }
+
+  return (
+    <div className="p-6 space-y-4">
+      <h3 className="text-lg font-semibold">通知设置</h3>
+      <div>
+        <label htmlFor="barkKey" className="block mb-1 text-sm font-medium text-slate-600">
+          Bark Key
+        </label>
+        <input
+          id="barkKey"
+          type="text"
+          value={barkKey}
+          onChange={(e) => setBarkKey(e.target.value)}
+          placeholder="粘贴您的 Bark Key"
+          className="block w-full px-3 py-2 transition duration-150 ease-in-out border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
+        />
+      </div>
+      <button
+        onClick={handleSave}
+        disabled={isSaving}
+        className="flex items-center justify-center w-full gap-2 px-4 py-2 font-bold text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400"
+      >
+        <Save size={18} />
+        {isSaving ? '保存中...' : '保存设置'}
+      </button>
+      {message && <p className="text-sm text-center text-green-600">{message}</p>}
+    </div>
+  );
+};
+
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -32,9 +99,10 @@ export default function HomePage() {
   const [newIntervalDays, setNewIntervalDays] = useState<number | ''>('');
   const [formError, setFormError] = useState('');
 
-  // 模态框状态
+  // 模态框与设置面板状态
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const fetchTasks = async () => {
     setIsLoading(true);
@@ -66,7 +134,7 @@ export default function HomePage() {
       setNewTitle(''); setNewDueDate(''); setNewType('one-time'); setNewIntervalDays('');
       fetchTasks();
     } else {
-      setFormError((await res.json()).message || '创建任务失败。');
+      setFormError((await res.json()).message || '���建任务失败。');
     }
   };
 
@@ -121,15 +189,26 @@ export default function HomePage() {
         <div className="max-w-5xl px-4 py-3 mx-auto sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold sm:text-2xl">任务管理器</h1>
-            <button onClick={() => signOut({ callbackUrl: '/login' })} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-colors bg-red-500 rounded-lg shadow-sm hover:bg-red-600">
-              <LogOut size={16} />
-              <span className="hidden sm:inline">退出登录</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowSettings(!showSettings)} className="p-2 text-slate-600 transition-colors rounded-lg hover:bg-slate-200" title="设置">
+                <Settings size={20} />
+              </button>
+              <button onClick={() => signOut({ callbackUrl: '/login' })} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-colors bg-red-500 rounded-lg shadow-sm hover:bg-red-600">
+                <LogOut size={16} />
+                <span className="hidden sm:inline">退出登录</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl p-4 mx-auto sm:p-6 lg:p-8">
+        {showSettings && (
+          <div className="mb-10 bg-white border border-gray-200 rounded-xl shadow-sm">
+            <SettingsPanel />
+          </div>
+        )}
+
         <div className="p-6 mb-10 bg-white border border-gray-200 rounded-xl shadow-sm">
           <h2 className="mb-4 text-xl font-semibold">添加新任务</h2>
           <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 md:grid-cols-6">

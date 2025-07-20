@@ -10,8 +10,8 @@ export async function GET(request: Request) {
   }
 
   // Ensure required environment variables are set
-  if (!process.env.DATABASE_URL || !process.env.BARK_KEY) {
-    console.error('Missing DATABASE_URL or BARK_KEY environment variables.');
+  if (!process.env.DATABASE_URL) {
+    console.error('Missing DATABASE_URL environment variable.');
     return new Response('Configuration error', { status: 500 });
   }
 
@@ -20,25 +20,33 @@ export async function GET(request: Request) {
   try {
     const now = new Date();
     
-    // 2. Find all tasks that are due and not completed.
+    // 2. Find all due tasks and join with users to get their barkKey
     const tasksToNotify = (await sql`
-      SELECT id, title FROM "Task"
-      WHERE "dueDate" <= ${now.toISOString()} AND "isCompleted" = false;
-    `) as Pick<Task, 'id' | 'title'>[];
+      SELECT 
+        t.id, 
+        t.title, 
+        u."barkKey"
+      FROM "Task" t
+      INNER JOIN "User" u ON t."userId" = u.id
+      WHERE t."dueDate" <= ${now.toISOString()} 
+        AND t."isCompleted" = false
+        AND u."barkKey" IS NOT NULL 
+        AND u."barkKey" != '';
+    `) as { id: string; title: string; barkKey: string }[];
 
     if (tasksToNotify.length === 0) {
       return NextResponse.json({ success: true, message: 'No tasks to notify.' });
     }
 
-    // 3. Send Bark notifications for each task
+    // 3. Send Bark notifications for each task to the respective user
     for (const task of tasksToNotify) {
-      const barkKey = process.env.BARK_KEY;
-      const title = encodeURIComponent(`任务通知: ${task.title}`);
-      const body = encodeURIComponent("此任务时间已到，请尽快处理。");
-      const barkUrl = `https://api.day.app/${barkKey}/${title}/${body}?group=任务管理器&sound=electronic&volume=10&level=critical&call=1`;
+      const barkKey = task.barkKey;
+      const title = encodeURIComponent(`任务到期: ${task.title}`);
+      const body = encodeURIComponent("此任务已到期，请尽快处理。");
+      const barkUrl = `https://api.day.app/${barkKey}/${title}/${body}?group=任务管理器`;
 
       // Fire and forget the fetch request
-      await fetch(barkUrl);
+      fetch(barkUrl);
     }
 
     return NextResponse.json({ success: true, tasksNotified: tasksToNotify.length });
