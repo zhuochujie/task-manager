@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       const barkKey = task.barkKey;
       const title = encodeURIComponent(`任务通知: ${task.title}`);
       const body = encodeURIComponent("此任务时间已到，请尽快处理。");
-      const barkUrl = `https://api.day.app/${barkKey}/${title}/${body}?group=任务管理器&sound=electronic&volume=10&level=critical&call=1`;
+      const barkUrl = `https://api.day.app/${barkKey}/${title}/${body}?group=任务管理器&sound=electronic&volume=5&level=critical&call=1&url=https://task.killbug.icu`;
 
       // Fire and forget the fetch request
       await fetch(barkUrl);
