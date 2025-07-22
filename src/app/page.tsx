@@ -303,7 +303,7 @@ export default function HomePage() {
         <div className="space-y-10">
           <TaskList title="已到期任务" tasks={dueTasks} onComplete={handleComplete} onEdit={openEditModal} onDelete={handleDelete} />
           <TaskList title="未到期任务" tasks={upcomingTasks} onComplete={handleComplete} onEdit={openEditModal} onDelete={handleDelete} />
-          <TaskList title="已完成任务" tasks={completedTasks} />
+          <TaskList title="已完成任务" tasks={completedTasks} onDelete={handleDelete} />
         </div>
       </main>
 
@@ -346,6 +346,11 @@ const TaskCard = ({ task, onComplete, onEdit, onDelete }: { task: Task; onComple
         <div className="flex gap-2 self-end sm:self-center flex-shrink-0">
           <button onClick={() => onComplete(task.id)} className="p-2 text-green-600 transition-colors rounded-lg hover:bg-green-100" title="完成"><Check size={18} /></button>
           <button onClick={() => onEdit(task)} className="p-2 text-blue-600 transition-colors rounded-lg hover:bg-blue-100" title="编辑"><Pencil size={18} /></button>
+          <button onClick={() => onDelete(task.id)} className="p-2 text-red-600 transition-colors rounded-lg hover:bg-red-100" title="删除"><Trash2 size={18} /></button>
+        </div>
+      )}
+      {task.isCompleted && onDelete && (
+        <div className="flex self-end sm:self-center flex-shrink-0">
           <button onClick={() => onDelete(task.id)} className="p-2 text-red-600 transition-colors rounded-lg hover:bg-red-100" title="删除"><Trash2 size={18} /></button>
         </div>
       )}
