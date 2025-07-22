@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       const barkUrl = `https://api.day.app/${barkKey}/${title}/${body}?group=任务管理器&sound=electronic&volume=10&level=critical&call=1`;
 
       // Fire and forget the fetch request
-      fetch(barkUrl);
+      await fetch(barkUrl);
     }
 
     return NextResponse.json({ success: true, tasksNotified: tasksToNotify.length });
